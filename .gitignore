@@ -1,0 +1,6 @@
+# 测试与临时产物，不随站点发布
+_test/
+*.raw
+*.log
+Thumbs.db
+.DS_Store
