@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NP3 → NCP 转换器 · 把尼康云创滤镜装进老机身</title>
+<meta name="description" content="把尼康云创的 NP3 滤镜转换成 D300 / D300S / D90 能读的自定义优化校准 NCP。全部在浏览器里完成，文件不上传。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231a5c8a'/%3E%3Ctext x='16' y='22' font-size='15' font-family='sans-serif' fill='%23fff' text-anchor='middle'%3EN%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#fff; --ink:#1b2430; --ink2:#4a5766; --ink3:#8494a6;
+    --line:#e2e8ef; --line2:#cfd9e4;
+    --brand:#1a5c8a; --brand2:#2b7cb5; --brandbg:#eaf3fa;
+    --ok:#1a7f5a; --okbg:#e6f5ef;
+    --warn:#9a6a10; --warnbg:#fdf5e3;
+    --bad:#a63a3a; --badbg:#fbebeb;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",
+         "Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:940px; margin:0 auto; padding:40px 24px 80px}
+
+  header{margin-bottom:28px}
+  h1{font-size:26px; margin:0 0 8px; letter-spacing:-.3px}
+  h1 small{font-weight:400; color:var(--ink3); font-size:15px; margin-left:10px; letter-spacing:0}
+  .lede{color:var(--ink2); margin:0; max-width:680px}
+  .privacy{
+    display:inline-flex; align-items:center; gap:7px; margin-top:14px; padding:6px 13px;
+    background:var(--okbg); color:#116046; border-radius:20px; font-size:12.5px;
+  }
+
+  .steps{display:flex; gap:10px; margin:22px 0 26px; flex-wrap:wrap}
+  .step{display:flex; align-items:center; gap:8px; color:var(--ink3); font-size:13.5px}
+  .step b{
+    width:22px;height:22px;border-radius:50%;background:#fff;border:1px solid var(--line2);
+    display:grid;place-items:center;font-size:12px;font-weight:600;color:var(--ink3)
+  }
+  .step.on{color:var(--brand)}
+  .step.on b{background:var(--brand);border-color:var(--brand);color:#fff}
+  .step.done b{background:var(--ok);border-color:var(--ok);color:#fff}
+  .step.done{color:var(--ok)}
+  .arw{color:#c8d3de}
+
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:22px 24px; margin-bottom:18px; box-shadow:0 1px 2px rgba(27,36,48,.04);
+  }
+  .card h2{font-size:16px; margin:0 0 4px}
+  .card .sub{color:var(--ink3); font-size:13px; margin:0 0 16px}
+
+  #drop{
+    border:2px dashed var(--line2); border-radius:14px; background:#fbfcfd;
+    padding:46px 20px; text-align:center; cursor:pointer; transition:.16s;
+  }
+  #drop:hover{border-color:var(--brand2); background:#f7fbfe}
+  #drop.over{border-color:var(--brand); background:var(--brandbg); transform:scale(1.005)}
+  #drop .big{font-size:16px; margin-bottom:6px}
+  #drop .hint{color:var(--ink3); font-size:13px}
+  #drop .ico{font-size:30px; margin-bottom:10px; opacity:.5}
+
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .badge{
+    display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:20px;
+    font-size:12.5px; font-weight:500;
+  }
+  .badge.ok{background:var(--okbg); color:var(--ok)}
+  .badge.warn{background:var(--warnbg); color:var(--warn)}
+  .badge.bad{background:var(--badbg); color:var(--bad)}
+  .badge.gray{background:#eef2f6; color:var(--ink2)}
+
+  .name{font-size:20px; font-weight:600; letter-spacing:-.2px}
+  .name span{font-size:14px; font-weight:400; color:var(--ink3); margin-left:8px}
+
+  table.kv{width:100%; border-collapse:collapse; margin:14px 0 4px; font-size:13.5px}
+  table.kv td{padding:6px 0; border-bottom:1px solid #f0f4f8; vertical-align:top}
+  table.kv td:first-child{color:var(--ink3); width:150px}
+  table.kv td:last-child{font-family:var(--mono); font-size:13px; color:var(--ink)}
+
+  .btn{
+    border:1px solid var(--brand); background:var(--brand); color:#fff; border-radius:9px;
+    padding:9px 18px; font-size:14px; cursor:pointer; font-family:inherit; font-weight:500;
+    transition:.14s; text-decoration:none; display:inline-block; line-height:1.45;
+  }
+  .btn:hover{background:var(--brand2); border-color:var(--brand2)}
+  .btn:disabled{opacity:.45; cursor:not-allowed}
+  .btn.ghost{background:#fff; color:var(--brand); border-color:var(--line2)}
+  .btn.ghost:hover{background:var(--brandbg); border-color:var(--brand2)}
+  .btn.sm{padding:6px 13px; font-size:13px}
+
+  input[type=text],input[type=number]{
+    border:1px solid var(--line2); border-radius:8px; padding:8px 11px; font-size:13.5px;
+    font-family:var(--mono); background:#fff; color:var(--ink); outline:none;
+  }
+  input[type=text]:focus,input[type=number]:focus{border-color:var(--brand2); box-shadow:0 0 0 3px var(--brandbg)}
+  label.fld{display:flex; flex-direction:column; gap:5px; font-size:12.5px; color:var(--ink3)}
+  label.fld input{width:100%}
+
+  .panel{background:#f8fafc; border:1px solid var(--line); border-radius:11px; padding:16px; margin-top:14px}
+  .panel h3{font-size:13.5px; margin:0 0 10px; color:var(--ink2); font-weight:600}
+
+  .msg{padding:11px 14px; border-radius:9px; font-size:13.5px; margin-top:14px; display:none}
+  .msg.show{display:block}
+  .msg.ok{background:var(--okbg); color:#0f6045; border:1px solid #c9e8db}
+  .msg.bad{background:var(--badbg); color:#8d3030; border:1px solid #efcaca}
+  .msg.info{background:var(--brandbg); color:#1a4d70; border:1px solid #cfe3f2}
+
+  canvas{max-width:100%; display:block}
+  .chartbox{background:#fff; border:1px solid var(--line); border-radius:10px; padding:8px}
+
+  .kbd{
+    font-family:var(--mono); font-size:12px; background:#eef2f6; padding:1px 6px;
+    border-radius:5px; color:var(--ink2)
+  }
+  .muted{color:var(--ink3); font-size:13px}
+  .drop2{
+    border:2px dashed var(--line2); border-radius:10px; padding:22px; text-align:center;
+    cursor:pointer; transition:.15s; font-size:13.5px; color:var(--ink2); background:#fff;
+  }
+  .drop2:hover{border-color:var(--brand2); background:#f8fcff}
+  .drop2.over{border-color:var(--brand); background:var(--brandbg)}
+  .drop2.filled{border-style:solid; border-color:var(--ok); background:var(--okbg); color:var(--ok)}
+  .flex2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  @media(max-width:640px){.flex2{grid-template-columns:1fr}}
+  .foot{margin-top:34px; padding-top:18px; border-top:1px solid var(--line);
+        color:var(--ink2); font-size:13px; line-height:1.85}
+  .foot b{color:var(--ink)}
+  .foot a{color:var(--brand); text-decoration:none}
+  #libinfo{color:var(--ink2)}
+  .hidden{display:none !important}
+  ol.steps2{margin:8px 0 0; padding-left:22px; color:var(--ink2); font-size:13.5px}
+  ol.steps2 li{margin:5px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>NP3 → NCP 转换器<small>把尼康云创滤镜装进老机身</small></h1>
+    <p class="lede">拖入一个 <b>.NP3</b>（或 .NP2）滤镜，得到一个 D300 / D300S / D90 能直接读的自定义优化校准 <b>.NCP</b>，放进存储卡的 <span class="kbd">NIKON\CUSTOMPC</span> 就能在机身菜单里选用。</p>
+    <div class="privacy">● 全程在你的浏览器里计算，滤镜文件和照片都不会上传到任何服务器</div>
+  </header>
+
+  <div class="steps">
+    <div class="step on" id="s1"><b>1</b> 拖入滤镜</div><span class="arw">→</span>
+    <div class="step" id="s2"><b>2</b> 确认或标定</div><span class="arw">→</span>
+    <div class="step" id="s3"><b>3</b> 存进存储卡</div>
+  </div>
+
+  <div class="card">
+    <div id="drop">
+      <div class="ico">◉</div>
+      <div class="big">把 .NP3 文件拖到这里</div>
+      <div class="hint">或点击选择文件　·　支持 .NP3 / .NP2，一次一个</div>
+    </div>
+    <input type="file" id="file" accept=".NP3,.NP2,.np3,.np2" class="hidden">
+    <div class="msg" id="m1"></div>
+  </div>
+
+  <!-- ========== 结果 ========== -->
+  <div id="res" class="hidden">
+    <div class="card">
+      <div class="row" style="justify-content:space-between; align-items:flex-start">
+        <div>
+          <div class="name" id="rname">—<span id="rcn"></span></div>
+          <div class="muted" id="rmeta" style="margin-top:4px"></div>
+        </div>
+        <div id="rbadge"></div>
+      </div>
+
+      <table class="kv" id="rtab"></table>
+
+      <div class="panel" id="curvepanel">
+        <h3>这条滤镜的影调曲线</h3>
+        <div class="chartbox"><canvas id="cv" width="820" height="340"></canvas></div>
+        <div class="muted" style="margin-top:8px" id="cvenote"></div>
+      </div>
+    </div>
+
+    <!-- 标定区 -->
+    <div class="card hidden" id="calbox">
+      <h2>这个滤镜还没量过，需要一步标定</h2>
+      <p class="sub">NP3 文件里只存了滤镜编号，没存曲线 —— 所以必须用这个滤镜实际处理一张图，才能量出它到底做了什么。整个过程只要一分钟，量一次以后这个滤镜就进库了。</p>
+
+      <div class="panel">
+        <h3>第 1 步：拿一张标定图</h3>
+        <p class="muted" style="margin:0 0 12px">这张图上半是 256 级灰阶、下半是 32 块色卡。程序知道它每个像素原本是多少，所以能直接从处理后的结果倒推出曲线。</p>
+        <div class="row">
+          <a class="btn ghost sm" href="assets/calibration_target.png" download="np3tool-calibration-target.png">下载标定图</a>
+          <span class="muted">→ 放进 NX Studio，优化校准选这个滤镜，其余参数保持默认，导出 JPG（<b>尺寸不要改</b>，色彩空间选 sRGB）</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>第 2 步：把导出的图传回来</h3>
+        <div id="drop2" class="drop2">点这里选择，或把导出的图拖进来</div>
+        <input type="file" id="file2" accept="image/*" class="hidden">
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="btnSolve" disabled>开始标定</button>
+          <span class="muted" id="solvehint">先选一张图</span>
+        </div>
+        <div class="msg" id="m2"></div>
+      </div>
+    </div>
+
+    <!-- 导出 -->
+    <div class="card hidden" id="expbox">
+      <h2>存进存储卡</h2>
+      <p class="sub" id="expsub">先下载文件，再手动拷到卡里的 <span class="kbd">NIKON\CUSTOMPC</span>；用 Chrome / Edge 也可以直接选卡写入。</p>
+      <div class="flex2">
+        <label class="fld">机身里的槽位号（1–30）
+          <input type="number" id="slot" min="1" max="30" value="1">
+        </label>
+        <label class="fld">文件名会是这样
+          <input type="text" id="fname" readonly value="PICCON01.NCP">
+        </label>
+      </div>
+      <div class="row" style="margin-top:16px">
+        <button class="btn" id="btnExport">下载 .NCP</button>
+        <button class="btn ghost hidden" id="btnCard">直接写入存储卡…</button>
+        <label class="muted hidden" id="savelibwrap" style="display:flex;align-items:center;gap:7px;cursor:pointer">
+          <input type="checkbox" id="savelib" checked> 顺便存进本机标定库（下次直接命中）
+        </label>
+      </div>
+      <div class="msg" id="m3"></div>
+      <div class="panel" style="margin-top:16px">
+        <h3>拷进机身之后</h3>
+        <ol class="steps2">
+          <li>把存储卡插回机身，开机；</li>
+          <li>按 <span class="kbd">MENU</span> → 拍摄菜单 → <b>管理优化校准</b>；</li>
+          <li>选一个空槽位 → 「载入/保存」→「从存储卡载入」；</li>
+          <li>之后就能在「设定优化校准」里选它，跟内置的几个并列。</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <p><b>它做了什么</b>：把 NP3 的参数按对应关系搬进 NCP，并用一条自定义曲线重建滤镜的影调与色彩倾向；写入前会做机身曲线预补偿（机身执行的是 <span class="kbd">C(H(x))</span>，直接写目标曲线会整体偏暗）。</p>
+    <p><b>它会丢什么</b>：NP3 里的「清晰度」「效果级别」「快速锐化」在 NCP 格式里没有对应位置，三项会丢失；锐化、对比度、亮度、饱和度、色相、调色可以保留或近似。这是格式差异，不是转换出错。</p>
+    <p><b>为什么需要「标定」</b>：NP3 文件里只有一个 2 字节的底子编号，没有曲线。已量过的底子直接用库里现成的结果；没量过的只能拿标定图现场量一次。</p>
+    <p id="libinfo" class="muted"></p>
+  </div>
+</div>
+
+<script src="np3core.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const N = window.NP3;
+const LS_KEY = 'np3tool.custom.v1';
+
+const LIB = new N.Library();
+const state = { info:null, entry:null, entryRaw:null, curve:null, mono:false,
+                n:0, m:0, tone:0, k:0, slot:1, solved:false };
+
+function msg(el, text, cls){
+  el.className = 'msg show ' + (cls||'info');
+  el.innerHTML = text;
+}
+function hideMsg(el){ el.className = 'msg'; el.innerHTML=''; }
+function step(n, cls){
+  for (let i=1;i<=3;i++){
+    const e = $('#s'+i); e.className = 'step' + (i===n?(' '+cls):(i<n?' done':''));
+  }
+}
+function hex2(v){ return ('0000'+v.toString(16).toUpperCase()).slice(-4); }
+function fmt(v){
+  if (v === null || v === undefined) return '—';
+  return (Math.abs(v) < 10 && v % 1) ? v.toFixed(2) : String(v);
+}
+
+/* ---------- 库 ---------- */
+function slotFromName(fn){
+  const m = /^PICCON(\d{2})/i.exec(fn||'');
+  return m ? parseInt(m[1],10) : 0;
+}
+function loadCustom(){
+  let arr = [];
+  try{ arr = JSON.parse(localStorage.getItem(LS_KEY)||'[]'); }catch(e){ arr = []; }
+  arr.forEach(c=>{
+    try{ LIB.addRaw(N.base64ToBytes(c.b64), 'custom', c.base_np, c.label, c.slot||0); }catch(e){}
+  });
+  return arr.length;
+}
+function saveCustom(raw, slot){
+  let arr = [];
+  try{ arr = JSON.parse(localStorage.getItem(LS_KEY)||'[]'); }catch(e){ arr = []; }
+  const item = { base_np: state.info.base, label: state.info.name, slot: slot,
+                 b64: N.bytesToBase64(raw), ts: Date.now() };
+  const i = arr.findIndex(x=>x.base_np === item.base_np);
+  if (i >= 0) arr[i] = item; else arr.push(item);
+  localStorage.setItem(LS_KEY, JSON.stringify(arr));
+  LIB.addRaw(raw, 'custom', item.base_np, item.label, slot);
+  return item.label;
+}
+
+/* ---------- 拖放 ---------- */
+function wireDrop(zone, input, cb){
+  zone.addEventListener('click', ()=>input.click());
+  ['dragenter','dragover'].forEach(e=>zone.addEventListener(e, ev=>{
+    ev.preventDefault(); zone.classList.add('over');
+  }));
+  ['dragleave','drop'].forEach(e=>zone.addEventListener(e, ev=>{
+    ev.preventDefault(); zone.classList.remove('over');
+  }));
+  zone.addEventListener('drop', ev=>{
+    const f = ev.dataTransfer.files[0];
+    if (f) cb(f);
+  });
+  input.addEventListener('change', ()=>{
+    if (input.files[0]) cb(input.files[0]);
+  });
+}
+
+wireDrop($('#drop'), $('#file'), async f=>{
+  if (!/\.np[23]$/i.test(f.name)) return msg($('#m1'), '请选 .NP3 或 .NP2 文件', 'bad');
+  msg($('#m1'), '正在读文件…', 'info');
+  try{
+    const buf = new Uint8Array(await f.arrayBuffer());
+    const info = N.parseNP(buf);
+    showResult(info, f.name);
+  }catch(e){
+    msg($('#m1'), '出错了：' + (e.message||e), 'bad');
+  }
+});
+
+/* ---------- 结果 ---------- */
+function showResult(info, fname){
+  const hit = LIB.lookup(info.name, info.base);
+  const entry = hit[0], how = hit[1];
+
+  state.info = info;
+  state.entry = entry;
+  state.entryRaw = entry ? entry.raw : null;
+  state.solved = false;
+
+  $('#res').classList.remove('hidden');
+  hideMsg($('#m1'));
+
+  $('#rname').innerHTML = (info.name||'（无名字）') +
+      (N.CN_NAME[info.name] ? '<span>'+N.CN_NAME[info.name]+'</span>' : '');
+  $('#rmeta').textContent = fname + '　·　底子编号 0x' + hex2(info.base) +
+      '　·　' + info.size + ' 字节 / ' + info.n_cards + ' 张卡';
+
+  const P = info.params || {};
+  const kept = [], lost = [];
+  const map = {sharp:'锐化', contrast:'对比度', brightness:'亮度',
+               saturation:'饱和度', hue:'色相', tone:'调色', tone_strength:'调色强度',
+               filter:'滤镜效果'};
+  for (const k in map){
+    const v = P[k];
+    if (v === undefined || v === null || v === 0) continue;
+    let note = '';
+    if (k === 'sharp' && v < 0) note = '<span style="color:#9a6a10">（下限 0，会钳位）</span>';
+    if (k === 'brightness' && Math.abs(v) > 1) note = '<span style="color:#9a6a10">（范围 ±1，会钳位）</span>';
+    if (k === 'contrast' && Math.abs(v) > 3) note = '<span style="color:#9a6a10">（范围 ±3，会钳位）</span>';
+    if ((k === 'saturation' || k === 'hue') && Math.abs(v) > 3)
+      note = '<span style="color:#9a6a10">（范围 ±3，会钳位）</span>';
+    kept.push([map[k], fmt(v) + note]);
+  }
+  if (P.clarity !== undefined && P.clarity !== null) lost.push('清晰度');
+  if (P.effect_level !== undefined && P.effect_level !== null) lost.push('效果级别');
+  if (P.quick_sharp !== undefined && P.quick_sharp !== null) lost.push('快速锐化');
+
+  let rows = '<tr><td>底子编号</td><td>0x' + hex2(info.base) +
+      (entry ? '　（已能从标定库对应上 · ' + how + '）' : '　（库里没有）') + '</td></tr>';
+  rows += '<tr><td>参数（会写进 NCP）</td><td>' +
+      (kept.length ? kept.map(x=>x[0]+' '+x[1]).join('　') : '全部为 0 或「不适用」') + '</td></tr>';
+  rows += '<tr><td>参数（NCP 没有位置）</td><td>' +
+      (lost.length ? lost.join('、') + '　<span style="color:#8494a6">带数值，但 NCP 格式里没有对应字段</span>' : '无') +
+      '</td></tr>';
+  $('#rtab').innerHTML = rows;
+
+  // AUTO 是「随场景自动决定」的底子，老机身没有这套判断逻辑
+  if (info.base === 0x02CF){
+    $('#rbadge').innerHTML = '<span class="badge bad">● 无法转换</span>';
+    $('#expbox').classList.add('hidden');
+    $('#curvepanel').classList.add('hidden');
+    $('#calbox').classList.add('hidden');
+    msg($('#m1'), '<b>这一支做不了。</b>AUTO 是跟着场景自动变的底子，机身里没有一个固定的曲线能对上它。这一支老机型做不了。', 'bad');
+    step(2,'on');
+    window.scrollTo({top: $('#res').offsetTop - 20, behavior:'smooth'});
+    return;
+  }
+
+  if (entry){
+    let curve = null;
+    if (entry.lut){
+      curve = new Array(256);
+      const xp = [], fp = [];
+      for (let i=0;i<257;i++){ xp.push(i); fp.push(entry.lut[i]); }
+      for (let i=0;i<256;i++) curve[i] = N.interp(N.H(i), xp, fp);
+    }
+    state.curve = curve;
+    state.mono = entry.base === N.MONO_BASE;
+
+    $('#rbadge').innerHTML = '<span class="badge ok">● 可以直接用</span>';
+    $('#calbox').classList.add('hidden');
+    $('#expbox').classList.remove('hidden');
+    $('#savelibwrap').classList.add('hidden');
+    $('#curvepanel').classList.remove('hidden');
+    $('#slot').value = entry.slot || 1;
+    updateFname();
+    $('#cvenote').innerHTML = entry.lut
+      ? '这条曲线来自实拍样片标定，不是现算的 —— 30 对同机位成片的平均差 6.0 级'
+        + '（原版与老机身的系统差异另计）。竖轴＝机身输出，横轴＝输入。'
+      : '这一支在 NCP 里没有自定义曲线：它直接用机身内置的<b>'
+        + (state.mono ? '单色' : '人像') + '底子</b>，只改底子与滑块。'
+        + '虚线是「不做任何改动」的参考线，两者重合就是没有曲线。';
+    drawCurve(curve);
+    hideMsg($('#m3'));
+    step(2,'done');
+  }else{
+    $('#rbadge').innerHTML = '<span class="badge warn">● 需要先标定</span>';
+    $('#expbox').classList.add('hidden');
+    $('#curvepanel').classList.add('hidden');
+    $('#calbox').classList.remove('hidden');
+    $('#btnSolve').disabled = true;
+    shotFile = null;
+    $('#drop2').classList.remove('filled');
+    $('#drop2').textContent = '点这里选择，或把导出的图拖进来';
+    $('#solvehint').textContent = '先选一张图';
+    step(2,'on');
+  }
+  window.scrollTo({top: $('#res').offsetTop - 20, behavior:'smooth'});
+}
+
+/* ---------- 标定 ---------- */
+let shotFile = null;
+wireDrop($('#drop2'), $('#file2'), f=>{
+  if (!f.type.startsWith('image/') && !/\.(jpe?g|png|tiff?|bmp|webp)$/i.test(f.name))
+    return msg($('#m2'), '请选一张图片', 'bad');
+  shotFile = f;
+  $('#drop2').classList.add('filled');
+  $('#drop2').textContent = '已选择：' + f.name;
+  $('#btnSolve').disabled = false;
+  $('#solvehint').textContent = '点「开始标定」';
+});
+
+// 读图：不缩放、不做色彩空间转换、不预乘 alpha，尽量和 Python 端逐像素一致
+async function loadImageData(file){
+  const bmp = await createImageBitmap(file, {colorSpaceConversion:'none', premultiplyAlpha:'none'});
+  if (bmp.width !== N.TW || bmp.height !== N.TH){
+    const w = bmp.width, h = bmp.height;
+    bmp.close && bmp.close();
+    throw new Error('图片尺寸是 ' + w + '×' + h + '，标定图应为 ' + N.TW + '×' + N.TH +
+                    '。请在 NX Studio 导出时把尺寸设成原始大小，不要缩放或裁切。');
+  }
+  const cv = document.createElement('canvas');
+  cv.width = N.TW; cv.height = N.TH;
+  const g = cv.getContext('2d', {willReadFrequently:true});
+  g.drawImage(bmp, 0, 0);
+  if (bmp.close) bmp.close();
+  const d = g.getImageData(0, 0, N.TW, N.TH).data;
+  const n = N.TW * N.TH;
+  const out = new Float64Array(n * 3);
+  for (let i = 0, j = 0; i < n; i++, j += 4){
+    out[i*3]   = d[j];
+    out[i*3+1] = d[j+1];
+    out[i*3+2] = d[j+2];
+  }
+  return {w: N.TW, h: N.TH, data: out};
+}
+
+$('#btnSolve').addEventListener('click', async ()=>{
+  if (!shotFile || !state.info) return;
+  $('#btnSolve').disabled = true;
+  msg($('#m2'), '正在量曲线…', 'info');
+  try{
+    const img = await loadImageData(shotFile);
+    const r = N.solveFromTarget(img);
+
+    state.curve = r.curve;
+    state.mono = r.mono;
+    state.n = r.n; state.m = r.m; state.tone = r.tone; state.k = r.k;
+    state.entry = null; state.entryRaw = null;
+    state.solved = true;
+
+    msg($('#m2'),
+      '标定完成。解出 ' + (r.mono
+        ? ('单色底子，调色＝' + N.TONING[r.tone] + (r.tone ? ('，强度 ' + r.k.toFixed(2)) : '，无调色'))
+        : ('饱和度 ' + (r.n>0?'+':'') + r.n + ' 档、色相 ' + (r.m>0?'+':'') + r.m +
+           ' 档（实测彩度比 ' + r.ratio.toFixed(3) + '、色相偏 ' + r.dhue.toFixed(1) + '°）')),
+      'ok');
+    $('#rbadge').innerHTML = '<span class="badge ok">● 已标定，可以导出</span>';
+    $('#curvepanel').classList.remove('hidden');
+    $('#cvenote').textContent = '这条曲线是刚从你导出的图上量出来的：256 个灰阶点逐点读数，没有拟合外推。';
+    drawCurve(r.curve);
+    $('#calbox').classList.add('hidden');
+    $('#expbox').classList.remove('hidden');
+    $('#savelibwrap').classList.remove('hidden');
+    updateFname();
+    msg($('#m3'), '曲线已从这个滤镜的实际成片里量出来了，现在可以导出。' +
+        (r.mono ? '（单色系，调色＝' + N.TONING[r.tone] + '）'
+                : '（饱和度 ' + (r.n>0?'+':'') + r.n + ' 档、色相 ' + (r.m>0?'+':'') + r.m + ' 档）'),
+        'info');
+    step(3,'on');
+  }catch(e){
+    msg($('#m2'), '出错了：' + (e.message||e), 'bad');
+  }finally{
+    $('#btnSolve').disabled = false;
+  }
+});
+
+/* ---------- 曲线图 ---------- */
+function drawCurve(curve){
+  const c = $('#cv'), g = c.getContext('2d');
+  const W = c.width, H = c.height, L = 76, R = 18, T = 16, B = 46;
+  const pw = W-L-R, ph = H-T-B;
+  g.clearRect(0,0,W,H);
+  g.fillStyle = '#fff'; g.fillRect(0,0,W,H);
+
+  const X = v => L + v/255*pw, Y = v => T + ph - v/255*ph;
+
+  g.strokeStyle = '#eef2f6'; g.lineWidth = 1;
+  for (let v=0; v<=255; v+=32){
+    g.beginPath(); g.moveTo(X(v),T); g.lineTo(X(v),T+ph); g.stroke();
+    g.beginPath(); g.moveTo(L,Y(v)); g.lineTo(L+pw,Y(v)); g.stroke();
+  }
+  g.strokeStyle = '#d8e1ea'; g.strokeRect(L,T,pw,ph);
+
+  g.strokeStyle = '#c3cfdb'; g.setLineDash([5,4]); g.lineWidth = 1.4;
+  g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(X(255),Y(255)); g.stroke();
+  g.setLineDash([]);
+
+  if (curve && curve.length){
+    g.beginPath(); g.moveTo(X(0), Y(curve[0]));
+    for (let i=1;i<curve.length;i++) g.lineTo(X(i), Y(curve[i]));
+    g.lineTo(X(255), Y(0)); g.lineTo(X(0), Y(0)); g.closePath();
+    const grad = g.createLinearGradient(0,T,0,T+ph);
+    grad.addColorStop(0,'rgba(43,124,181,.20)');
+    grad.addColorStop(1,'rgba(43,124,181,.02)');
+    g.fillStyle = grad; g.fill();
+
+    g.beginPath(); g.moveTo(X(0), Y(curve[0]));
+    for (let i=1;i<curve.length;i++) g.lineTo(X(i), Y(curve[i]));
+    g.strokeStyle = '#1a5c8a'; g.lineWidth = 2.2; g.lineJoin='round'; g.stroke();
+  }
+
+  g.fillStyle = '#8494a6'; g.font = '12px "SFMono-Regular",Consolas,monospace';
+  g.textAlign = 'right'; g.textBaseline = 'middle';
+  for (let v=0; v<=255; v+=64) g.fillText(v, L-13, Y(v));
+  g.textAlign = 'center'; g.textBaseline = 'top';
+  for (let v=0; v<=255; v+=64) g.fillText(v, X(v), T+ph+9);
+  g.fillStyle = '#4a5766'; g.font = '12.5px -apple-system,"Microsoft YaHei",sans-serif';
+  g.textAlign = 'center';
+  g.fillText('输入亮度', L+pw/2, H-15);
+  g.save(); g.translate(13, T+ph/2); g.rotate(-Math.PI/2);
+  g.fillText('机身输出亮度', 0, 0); g.restore();
+}
+
+/* ---------- 导出 ---------- */
+function updateFname(){
+  const slot = Math.max(1, Math.min(30, parseInt($('#slot').value,10) || 1));
+  $('#fname').value = 'PICCON' + ('0'+slot).slice(-2) + '.NCP';
+}
+$('#slot').addEventListener('input', updateFname);
+
+function buildRaw(){
+  if (state.entryRaw) return state.entryRaw;          // 库里命中：原样输出，不改一个字节
+  if (!state.curve) throw new Error('还没有曲线，请先完成标定');
+  const sliders = state.mono
+    ? N.slidersFor(true, {tone: state.tone, k: state.k})
+    : N.slidersFor(false, {n: state.n, m: state.m});
+  const base = state.mono ? N.MONO_BASE : N.COLOR_BASE;
+  return N.makeNCP(state.info.name, base, sliders, state.curve);
+}
+
+$('#btnExport').addEventListener('click', ()=>{
+  try{
+    const raw = buildRaw();
+    const prob = N.checkNCP(raw);
+    if (prob.length) throw new Error('生成的文件没通过自检：' + prob.join('；'));
+    const slot = Math.max(1, Math.min(30, parseInt($('#slot').value,10) || 1));
+    const fn = 'PICCON' + ('0'+slot).slice(-2) + '.NCP';
+
+    const blob = new Blob([raw], {type:'application/octet-stream'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fn;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+
+    let extra = '';
+    if ($('#savelib').checked && !$('#savelibwrap').classList.contains('hidden')){
+      const label = saveCustom(raw, slot);
+      extra = '<br>同时已存进本机标定库：' + label + '（下次同底子的滤镜直接命中）。';
+    }
+    msg($('#m3'),
+      '已生成 <b>' + fn + '</b>（' + raw.length + ' 字节，槽位 ' + slot + '）。' +
+      '把它拷到存储卡的 <b>NIKON\\CUSTOMPC</b> 里，插回机身 → 拍摄菜单 → 「管理优化校准」→ 从存储卡载入。' + extra,
+      'ok');
+    step(3,'done');
+  }catch(e){
+    msg($('#m3'), '出错了：' + (e.message||e), 'bad');
+  }
+});
+
+// 支持 File System Access 的浏览器可以直接写卡
+if (window.showDirectoryPicker){
+  $('#btnCard').classList.remove('hidden');
+  $('#expsub').innerHTML = '点「下载 .NCP」存到电脑再拷进 <span class="kbd">NIKON\\CUSTOMPC</span>；' +
+    '也可以直接选存储卡的根目录，程序自己建好目录写进去。';
+}
+$('#btnCard').addEventListener('click', async ()=>{
+  try{
+    const raw = buildRaw();
+    const prob = N.checkNCP(raw);
+    if (prob.length) throw new Error('生成的文件没通过自检：' + prob.join('；'));
+    const slot = Math.max(1, Math.min(30, parseInt($('#slot').value,10) || 1));
+    const fn = 'PICCON' + ('0'+slot).slice(-2) + '.NCP';
+
+    msg($('#m3'), '请在弹出的窗口里选中存储卡的根目录…', 'info');
+    const dir = await window.showDirectoryPicker({mode:'readwrite'});
+    let target = dir, prefix = '';
+    if (dir.name.toUpperCase() !== 'CUSTOMPC'){
+      const nikon = await dir.getDirectoryHandle('NIKON', {create:true});
+      target = await nikon.getDirectoryHandle('CUSTOMPC', {create:true});
+      prefix = 'NIKON\\CUSTOMPC\\';
+    }
+    const fh = await target.getFileHandle(fn, {create:true});
+    const w = await fh.createWritable();
+    await w.write(raw);
+    await w.close();
+
+    msg($('#m3'),
+      '已写入 <b>' + prefix + fn + '</b>（' + raw.length + ' 字节，槽位 ' + slot + '）。' +
+      '插回机身 → 拍摄菜单 → 「管理优化校准」→ 从存储卡载入。', 'ok');
+    if ($('#savelib').checked && !$('#savelibwrap').classList.contains('hidden')){
+      saveCustom(raw, slot);
+    }
+    step(3,'done');
+  }catch(e){
+    if (e && e.name === 'AbortError') return hideMsg($('#m3'));
+    msg($('#m3'), '出错了：' + (e.message||e), 'bad');
+  }
+});
+
+/* ---------- 初始化 ---------- */
+(async function init(){
+  let nBuiltin = 0;
+  try{
+    const r = await fetch('library.json', {cache:'no-store'});
+    const j = await r.json();
+    for (const it of j.files){
+      try{
+        LIB.addRaw(N.base64ToBytes(it.b64), 'builtin', 0, '', slotFromName(it.f));
+        nBuiltin++;
+      }catch(e){}
+    }
+  }catch(e){
+    msg($('#m1'), '标定库没加载成功（' + (e.message||e) + '）。就算这样，拖入没量过的滤镜仍然可以用标定流程现场量。', 'info');
+  }
+  const nCustom = loadCustom();
+  const nBase = Object.keys(LIB.byBase).length;
+  $('#libinfo').textContent = '标定库里已量过 ' + nBase + ' 个滤镜底子（内置 ' +
+      nBuiltin + ' 支' + (nCustom ? '，本机另存 ' + nCustom + ' 支' : '') + '），可以直接转换。';
+})();
+</script>
+</body>
+</html>
